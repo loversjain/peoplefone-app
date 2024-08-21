@@ -99,56 +99,63 @@ class UserController extends Controller
     }
 
     /**
-     * Update user settings including notification preferences and phone number verification.
+     * Update the user's settings.
      *
      * @param \App\Http\Requests\UpdateUserSettingsRequest $request
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function updateSettings(UpdateUserSettingsRequest  $request)
+    public function updateSettings(UpdateUserSettingsRequest $request)
     {
-        // Fetch the user based on userId from the request
-        $user = $this->userRepo->find($request->userId);
-
-        // Check if user exists
-        if (!$user) {
-            return redirect()->back()->with('error', 'User not found.');
-        }
-
-        $user = $this->userRepo->find($request->userId);
-
-        $phoneNumber = $request->input('phone_number');
-
-        // Verify phone number using Twilio service
         try {
-            // Perform the lookup
-            $phoneDetails = $this->twilioService->lookup($phoneNumber);
-            // Get the raw content from the response
-            $content = $phoneDetails->getContent();
-            // Decode the JSON content
-            $decodedContent = json_decode($content, true);
+            // Find the user by ID
+            $user = $this->userRepo->find($request->userId);
 
-
-            // Check if 'is_real' key exists and is true
-            if (!isset($decodedContent['is_real']) || !$decodedContent['is_real']) {
-                return redirect()->back()->with('error', 'The phone number is not valid.');
+            // Check if the user exists
+            if (!$user) {
+                return redirect()->back()->with('error', 'User not found.');
             }
+
+            // Verify the phone number using a third-party service
+            $this->verifyPhoneNumber($request->input('phone_number'));
+
+            // Update the user's settings
+            $user->update($request->only('notification_switch', 'email', 'phone_number'));
+
+            // Redirect back to the settings page with a success message
+            return redirect()->route('users.settings', ['userId' => $request->userId])
+                ->with('success', 'Settings updated successfully.');
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Failed to verify phone number: ' . $e->getMessage());
-        }
-
-        // Update user settings
-        try {
-
-            $user->notification_switch = $request->input('notification_switch');
-            $user->email = $request->input('email');
-            $user->phone_number = $request->input('phone_number');
-            $user->save();
-
-            return redirect()->route('users.settings', ['userId' => $request->userId])->with('success', 'Settings updated successfully.');
-        } catch (\Exception $e) {
+            // Handle any exceptions and redirect back with an error message
             return redirect()->back()->with('error', 'Failed to update settings: ' . $e->getMessage());
         }
     }
+
+    /**
+     * Verify if the provided phone number is valid.
+     *
+     * @param string $phoneNumber
+     * @throws \Exception
+     */
+    protected function verifyPhoneNumber($phoneNumber)
+    {
+        try {
+            // Lookup phone number details using a third-party service
+            $phoneDetails = $this->twilioService->lookup($phoneNumber);
+
+            // Decode the response content
+            $content = $phoneDetails->getContent();
+            $decodedContent = json_decode($content, true);
+
+            // Check if the phone number is real
+            if (!isset($decodedContent['is_real']) || !$decodedContent['is_real']) {
+                throw new \Exception('The phone number is not valid.');
+            }
+        } catch (\Exception $e) {
+            // Handle any exceptions related to phone number verification
+            throw new \Exception('Failed to verify phone number: ' . $e->getMessage());
+        }
+    }
+
 
 
     /**
