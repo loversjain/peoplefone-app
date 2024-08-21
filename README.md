@@ -87,5 +87,36 @@ This application is built using Laravel and includes features for managing users
 
 To run the tests, use the following command:
 
-```bash
-php artisan test
+## Verification
+
+### Access the Application
+
+1. Open your web browser and navigate to `http://localhost:8000`. You should see the home page of the RIN2 application.
+
+### Check Notifications Functionality
+
+1. **Create a Notification**
+   - Go to `/notifications/create` and fill out the form to create a new notification.
+   
+2. **View Notifications**
+   - Access `/home` to see notifications and verify that they appear as expected.
+
+### User Management
+
+1. **View Users**
+   - Navigate to `/users` to check the list of users.
+   
+2. **Impersonate a User**
+   - Use the route `/users/impersonate/{userId}` to impersonate a user and verify that the functionality works.
+
+### Phone Number Verification
+
+- If Twilio is configured, test phone number verification by following the steps outlined in the application’s phone number verification section.
+
+### Check Logs and Errors
+
+- Monitor the application logs for any errors or warnings:
+
+   ```bash
+   tail -f storage/logs/laravel-2024-08-22.log
+
